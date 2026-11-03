@@ -5,7 +5,12 @@ import type { Brand, Job } from "./types";
 
 export const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 
-const g = globalThis as unknown as { __mediaDb?: DatabaseSync };
+const g = globalThis as unknown as {
+  __mediaDb?: DatabaseSync;
+  __jobsCleanedUp?: boolean;
+};
+
+const processStartTime = Date.now() - Math.floor(process.uptime() * 1000);
 
 function open(): DatabaseSync {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -23,13 +28,18 @@ function open(): DatabaseSync {
       created_at INTEGER NOT NULL
     );
   `);
-  // In-flight jobs die with the process; mark them so the UI doesn't spin forever.
-  for (const row of db.prepare("SELECT id, data FROM jobs WHERE data LIKE '%\"status\":\"running\"%' OR data LIKE '%\"status\":\"queued\"%'").all() as { id: string; data: string }[]) {
-    const job = JSON.parse(row.data) as Job;
-    job.status = "failed";
-    job.error = "Interrupted by server restart";
-    job.updatedAt = Date.now();
-    db.prepare("UPDATE jobs SET data = ? WHERE id = ?").run(JSON.stringify(job), row.id);
+  // Only clean up orphan jobs from a PREVIOUS server process run, once per process startup.
+  if (!g.__jobsCleanedUp) {
+    g.__jobsCleanedUp = true;
+    for (const row of db.prepare("SELECT id, data FROM jobs WHERE data LIKE '%\"status\":\"running\"%' OR data LIKE '%\"status\":\"queued\"%'").all() as { id: string; data: string }[]) {
+      const job = JSON.parse(row.data) as Job;
+      // If the job was created or updated in this current process run, do not mark it as failed!
+      if (job.updatedAt >= processStartTime) continue;
+      job.status = "failed";
+      job.error = "Interrupted by server restart";
+      job.updatedAt = Date.now();
+      db.prepare("UPDATE jobs SET data = ? WHERE id = ?").run(JSON.stringify(job), row.id);
+    }
   }
   return db;
 }
