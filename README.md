@@ -16,6 +16,54 @@ npm run dev                  # http://localhost:3000
 
 With no credentials set, the app runs in **mock mode**: outputs are branded SVG placeholders that show the brand colors and the prompt sent. Every flow works offline, which is useful for demos without quota.
 
+## Deploy to Cloud Run
+
+The app ships as a Docker image (`Dockerfile`). Cloud Run builds it straight from source. These steps assume you use Vertex AI (ADC) on Cloud Run, so no API key is stored anywhere.
+
+```bash
+export PROJECT_ID=your-project-id
+export REGION=us-central1
+export APP_PASSWORD='choose-a-shared-password'
+
+gcloud config set project $PROJECT_ID
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com aiplatform.googleapis.com
+
+# Service account the app runs as, allowed to call Vertex AI
+gcloud iam service-accounts create brand-studio
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:brand-studio@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
+# Deploy from this folder
+gcloud run deploy brand-studio --source . --region $REGION \
+  --service-account brand-studio@$PROJECT_ID.iam.gserviceaccount.com \
+  --allow-unauthenticated \
+  --no-cpu-throttling --max-instances 1 --min-instances 1 \
+  --memory 1Gi --timeout 900 \
+  --set-env-vars "APP_PASSWORD=$APP_PASSWORD,GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION"
+```
+
+Open the printed URL. The browser asks for the password (any username).
+
+Why these flags:
+
+- `--no-cpu-throttling`: jobs keep running after the HTTP response returns. Without this, Cloud Run pauses the CPU between requests and video polling stalls.
+- `--max-instances 1`: jobs and their progress live in SQLite on one instance. A second instance would not see them.
+- `--min-instances 1`: scaling to zero would kill a video job in progress. This costs a small always-on fee.
+- `--allow-unauthenticated` with `APP_PASSWORD`: the app's own password is the only gate. For stricter access, drop the flag and give people the `roles/run.invoker` role instead.
+
+Limits on Cloud Run:
+
+- Data lives in `/tmp` and is lost when the instance is replaced or redeployed. Gallery history and brands do not persist.
+- Veo access and region availability depend on your project. Check the Vertex AI console for your project's access to the video model.
+- Run `gcloud run services logs read brand-studio --region $REGION` to see errors.
+
+To avoid storing the password as a plain env var, put it in Secret Manager and use `--set-secrets APP_PASSWORD=brand-studio-password:latest` instead.
+
+## Using a Gemini API key instead
+
+If you do not want Vertex AI, set `GEMINI_API_KEY` (preferably via `--set-secrets`) and leave `GOOGLE_GENAI_USE_VERTEXAI` unset.
+
 ## Connecting Gemini
 
 Pick one:
