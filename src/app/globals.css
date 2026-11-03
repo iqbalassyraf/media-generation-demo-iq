@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f6f1e7;
+  --ink: #1f2a24;
+  --brand: #1f3a2e;
+  --accent: #e8b04b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14201a;
+    --ink: #f1ece0;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded border border-black/15 bg-white/80 px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)];
+  }
+}

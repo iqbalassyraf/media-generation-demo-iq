@@ -1,0 +1,105 @@
+import { GoogleGenAI } from "@google/genai";
+import { tmpDir } from "../storage";
+import fs from "node:fs";
+import path from "node:path";
+import type { ImageRequest, MediaProvider, VideoPoll, VideoStartRequest } from "./types";
+
+/**
+ * Gemini / Veo provider. Auth is chosen by env:
+ *  - GOOGLE_GENAI_USE_VERTEXAI=true  → Vertex AI with Application Default Credentials
+ *  - otherwise                        → Gemini Developer API with GEMINI_API_KEY
+ */
+function createClient(): GoogleGenAI {
+  if (process.env.GOOGLE_GENAI_USE_VERTEXAI === "true") {
+    return new GoogleGenAI({
+      vertexai: true,
+      project: process.env.GOOGLE_CLOUD_PROJECT,
+      location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
+    });
+  }
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set (or enable GOOGLE_GENAI_USE_VERTEXAI for ADC)");
+  return new GoogleGenAI({ apiKey });
+}
+
+export class GeminiProvider implements MediaProvider {
+  readonly name = "gemini";
+  readonly mock = false;
+  private ai: GoogleGenAI;
+  private imageModel = process.env.IMAGE_MODEL ?? "gemini-2.5-flash-image";
+  private videoModel = process.env.VIDEO_MODEL ?? "veo-3.0-generate-001";
+
+  constructor() {
+    this.ai = createClient();
+  }
+
+  async generateImage(req: ImageRequest) {
+    const parts: Array<Record<string, unknown>> = req.referenceImages.map((r) => ({
+      inlineData: { mimeType: r.mimeType, data: r.data.toString("base64") },
+    }));
+    parts.push({ text: req.prompt });
+
+    const res = await this.ai.models.generateContent({
+      model: this.imageModel,
+      contents: [{ role: "user", parts }],
+      config: {
+        responseModalities: ["IMAGE"],
+        imageConfig: { aspectRatio: req.aspectRatio },
+      },
+    } as Parameters<GoogleGenAI["models"]["generateContent"]>[0]);
+
+    const part = res.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+    if (!part?.inlineData?.data) {
+      const reason = res.candidates?.[0]?.finishReason ?? "no image part in response";
+      throw new Error(`Image model returned no image (${reason})`);
+    }
+    return {
+      data: Buffer.from(part.inlineData.data, "base64"),
+      mimeType: part.inlineData.mimeType ?? "image/png",
+    };
+  }
+
+  async startVideo(req: VideoStartRequest) {
+    const op = await this.ai.models.generateVideos({
+      model: this.videoModel,
+      prompt: req.prompt,
+      image: req.startingImage
+        ? { imageBytes: req.startingImage.data.toString("base64"), mimeType: req.startingImage.mimeType }
+        : undefined,
+      config: {
+        aspectRatio: req.aspectRatio,
+        durationSeconds: req.durationSeconds,
+        numberOfVideos: 1,
+      },
+    });
+    if (!op.name) throw new Error("Video model did not return an operation name");
+    return { operationName: op.name };
+  }
+
+  async pollVideo(operationName: string): Promise<VideoPoll> {
+    const op = await this.ai.operations.getVideosOperation({
+      operation: { name: operationName } as Parameters<GoogleGenAI["operations"]["getVideosOperation"]>[0]["operation"],
+    });
+    if (!op.done) return { done: false };
+    if (op.error) return { done: true, error: JSON.stringify(op.error) };
+
+    const video = op.response?.generatedVideos?.[0]?.video;
+    if (!video) {
+      const filtered = op.response?.raiMediaFilteredReasons?.[0];
+      return { done: true, error: filtered ? `Filtered: ${filtered}` : "Video model returned no video" };
+    }
+
+    let data: Buffer;
+    if (video.videoBytes) {
+      data = Buffer.from(video.videoBytes, "base64");
+    } else if (video.uri) {
+      const tmp = path.join(tmpDir(), `${Date.now()}-${Math.random().toString(36).slice(2)}.mp4`);
+      await this.ai.files.download({ file: video, downloadPath: tmp });
+      data = fs.readFileSync(tmp);
+      fs.rmSync(tmp, { force: true });
+    } else {
+      return { done: true, error: "Video had neither bytes nor a URI" };
+    }
+    return { done: true, data, mimeType: video.mimeType ?? "video/mp4" };
+  }
+}
