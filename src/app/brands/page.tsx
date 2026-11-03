@@ -71,17 +71,17 @@ export default function BrandKitPage() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-      <aside className="space-y-2">
+      <aside className="space-y-3 rounded-2xl border border-[#1B475D]/15 bg-white/50 p-4 shadow-sm backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-2xl text-[var(--brand)]">Brand kit</h1>
+          <h1 className="font-serif text-2xl font-bold tracking-tight text-[#1B475D]">Brand kit</h1>
         </div>
-        <button onClick={reset} className="w-full rounded border border-dashed border-black/30 px-3 py-2 text-sm">+ New brand</button>
+        <button onClick={reset} className="w-full rounded-lg border border-dashed border-[#1B475D]/30 bg-white/40 px-3 py-2 text-sm font-medium text-[#1B475D] hover:bg-white transition">+ New brand</button>
         <ul className="space-y-1">
           {brands.map((b) => (
             <li key={b.id}>
               <button onClick={() => edit(b)}
-                className={`flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm hover:bg-black/5 ${draft.id === b.id ? "bg-black/5 font-medium" : ""}`}>
-                {b.logo ? <img src={b.logo} alt="" className="h-6 w-6 rounded object-contain" /> : <span className="h-6 w-6 rounded bg-black/10" />}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${draft.id === b.id ? "bg-[#8EBD9D]/30 font-semibold text-[#1B475D]" : "hover:bg-white/60 text-[#1B475D]/80"}`}>
+                {b.logo ? <img src={b.logo} alt="" className="h-6 w-6 rounded object-contain" /> : <span className="h-6 w-6 rounded bg-[#1B475D]/10" />}
                 <span className="truncate">{b.name}</span>
               </button>
             </li>
@@ -89,12 +89,12 @@ export default function BrandKitPage() {
         </ul>
       </aside>
 
-      <form onSubmit={save} className="grid gap-5 md:grid-cols-2">
-        <div className="md:col-span-2 flex items-center justify-between">
-          <h2 className="font-serif text-xl">{draft.id ? "Edit brand" : "New brand"}</h2>
+      <form onSubmit={save} className="grid gap-5 md:grid-cols-2 rounded-2xl border border-[#1B475D]/15 bg-white/50 p-6 shadow-sm backdrop-blur-sm">
+        <div className="md:col-span-2 flex items-center justify-between border-b border-[#1B475D]/10 pb-3">
+          <h2 className="font-serif text-xl font-bold text-[#1B475D]">{draft.id ? "Edit brand" : "New brand"}</h2>
           <div className="flex items-center gap-3">
             {message && <span className={`text-sm ${message.kind === "ok" ? "text-emerald-700" : "text-red-700"}`}>{message.text}</span>}
-            {draft.id && <button type="button" onClick={remove} className="text-sm text-red-700 underline">Delete</button>}
+            {draft.id && <button type="button" onClick={remove} className="text-sm text-red-700 hover:underline">Delete</button>}
           </div>
         </div>
 
@@ -102,11 +102,11 @@ export default function BrandKitPage() {
         <Text label="Tagline" value={draft.tagline} onChange={set("tagline")} />
         <div className="md:col-span-2">
           <Label text="Brand colors (hex, comma separated)">
-            <input className="input" value={colorsText} onChange={(e) => setColorsText(e.target.value)} placeholder="#1F3A2E, #E8B04B" />
+            <input className="input" value={colorsText} onChange={(e) => setColorsText(e.target.value)} placeholder="#1B475D, #FAD564, #8EBD9D" />
           </Label>
           <div className="mt-2 flex gap-2">
             {colorsText.split(",").map((c) => c.trim()).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)).map((c) => (
-              <span key={c} className="h-6 w-6 rounded-full border border-black/10" style={{ background: c }} title={c} />
+              <span key={c} className="h-6 w-6 rounded-full border border-black/10 shadow-inner" style={{ background: c }} title={c} />
             ))}
           </div>
         </div>
@@ -119,12 +119,12 @@ export default function BrandKitPage() {
         <Label text="Logo (optional, under 1 MB)" className="md:col-span-2">
           <div className="flex items-center gap-3">
             <input type="file" accept="image/*" onChange={(e) => onLogo(e.target.files?.[0])} className="text-sm" />
-            {draft.logo && <img src={draft.logo} alt="" className="h-12 rounded border border-black/10 object-contain" />}
+            {draft.logo && <img src={draft.logo} alt="" className="h-12 rounded border border-[#1B475D]/15 object-contain" />}
           </div>
         </Label>
 
         <div className="md:col-span-2">
-          <button className="rounded bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white">Save brand</button>
+          <button className="rounded-lg bg-[#1B475D] px-6 py-2.5 text-sm font-semibold text-[#FFF5D0] shadow-sm hover:bg-[#1B475D]/90 transition">Save brand</button>
         </div>
       </form>
     </div>

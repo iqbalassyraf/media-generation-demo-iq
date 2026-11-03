@@ -3,26 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f6f1e7;
-  --ink: #1f2a24;
-  --brand: #1f3a2e;
-  --accent: #e8b04b;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #14201a;
-    --ink: #f1ece0;
-  }
+  --bg: #FFF5D0;           /* Barley */
+  --ink: #1B475D;          /* Rhino */
+  --brand: #1B475D;        /* Rhino */
+  --accent: #FAD564;       /* Naples */
+  --neptune: #8EBD9D;      /* Neptune */
+  --olive: #B4BD62;        /* Light Olive */
+  --barley: #FFF5D0;       /* Barley */
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
+  min-height: 100vh;
 }
 
 @layer components {
   .input {
-    @apply w-full rounded border border-black/15 bg-white/80 px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)];
+    @apply w-full rounded border border-[#1B475D]/25 bg-white/75 px-3 py-2 text-sm text-[var(--ink)] placeholder-[#1B475D]/45 backdrop-blur-sm transition focus:border-[var(--brand)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8EBD9D]/60;
   }
 }

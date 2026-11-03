@@ -99,12 +99,12 @@ export function ApiKeyModal() {
       <button
         type="button"
         onClick={openModal}
-        className="flex items-center gap-2 rounded-full border border-black/15 bg-white/60 px-3 py-1.5 text-xs font-medium text-[var(--ink)] shadow-sm backdrop-blur-sm transition hover:bg-white/90"
+        className="flex items-center gap-2 rounded-full border border-[#1B475D]/20 bg-white/70 px-3 py-1.5 text-xs font-medium text-[#1B475D] shadow-sm backdrop-blur-sm transition hover:bg-white/95"
         title={apiKey ? "BYOK Active: Custom Gemini API key set" : "No API key set: Running in Mock Mode"}
       >
         <span
           className={`h-2 w-2 rounded-full ${
-            apiKey ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]" : "bg-black/30"
+            apiKey ? "bg-[#8EBD9D] shadow-[0_0_8px_rgba(142,189,157,0.9)] ring-1 ring-[#1B475D]/20" : "bg-[#1B475D]/30"
           }`}
         />
         <span>
@@ -114,25 +114,25 @@ export function ApiKeyModal() {
 
       {/* Modal Dialog */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1B475D]/40 p-4 backdrop-blur-sm">
           <div
-            className="w-full max-w-md rounded-xl border border-black/15 bg-[var(--bg)] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            className="w-full max-w-md rounded-xl border border-[#1B475D]/20 bg-[#FFF5D0] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-[#1B475D]"
             role="dialog"
             aria-modal="true"
           >
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-serif text-lg font-semibold text-[var(--brand)]">
+                <h3 className="font-serif text-lg font-bold text-[#1B475D]">
                   Bring Your Own Key (BYOK)
                 </h3>
-                <p className="mt-1 text-xs text-black/60">
+                <p className="mt-1 text-xs text-[#1B475D]/70">
                   Use your Google AI Studio key (<code className="font-mono">AIzaSy...</code>) or Google Cloud Vertex AI key (<code className="font-mono">AQ....</code>). Stored locally in your browser.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-black/40 hover:text-black"
+                className="text-[#1B475D]/50 hover:text-[#1B475D]"
                 aria-label="Close"
               >
                 ✕
@@ -141,7 +141,7 @@ export function ApiKeyModal() {
 
             <div className="mt-5 space-y-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--ink)] mb-1">
+                <label className="block text-xs font-semibold text-[#1B475D] mb-1">
                   Gemini / Vertex AI Key
                 </label>
                 <div className="relative">
@@ -158,19 +158,19 @@ export function ApiKeyModal() {
                   <button
                     type="button"
                     onClick={() => setShowKey(!showKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-black/50 hover:text-black uppercase tracking-wider px-1 py-0.5"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#1B475D]/60 hover:text-[#1B475D] uppercase tracking-wider px-1 py-0.5"
                   >
                     {showKey ? "Hide" : "Show"}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-black/60">
+              <div className="flex items-center justify-between text-[11px] text-[#1B475D]/70">
                 <a
                   href="https://aistudio.google.com/apikey"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[var(--brand)] underline hover:opacity-80"
+                  className="text-[#1B475D] underline hover:text-[#8EBD9D]"
                 >
                   Get a free Gemini API key →
                 </a>
@@ -178,49 +178,49 @@ export function ApiKeyModal() {
                   type="button"
                   onClick={handleTest}
                   disabled={testState === "testing" || !inputVal.trim()}
-                  className="rounded border border-black/15 bg-white px-2 py-1 text-[11px] font-medium hover:bg-black/5 disabled:opacity-40"
+                  className="rounded border border-[#1B475D]/20 bg-white/80 px-2 py-1 text-[11px] font-medium text-[#1B475D] hover:bg-[#FAD564]/30 disabled:opacity-40 transition"
                 >
                   {testState === "testing" ? "Testing..." : "Test Key"}
                 </button>
               </div>
 
               {testState === "valid" && (
-                <div className="rounded bg-emerald-50 border border-emerald-200 p-2 text-xs text-emerald-800">
+                <div className="rounded bg-[#8EBD9D]/25 border border-[#8EBD9D] p-2 text-xs text-[#1B475D] font-medium">
                   ✓ {testMessage}
                 </div>
               )}
 
               {testState === "invalid" && (
-                <div className="rounded bg-rose-50 border border-rose-200 p-2 text-xs text-rose-800">
+                <div className="rounded bg-rose-50 border border-rose-300 p-2 text-xs text-rose-800">
                   ✕ {testMessage}
                 </div>
               )}
             </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-4">
+            <div className="mt-6 flex items-center justify-between border-t border-[#1B475D]/15 pt-4">
               {apiKey ? (
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="text-xs text-rose-600 hover:underline"
+                  className="text-xs text-rose-700 hover:underline"
                 >
                   Clear Key (Use Mock)
                 </button>
               ) : (
-                <span className="text-xs text-black/40">Mock mode is active</span>
+                <span className="text-xs text-[#1B475D]/50">Mock mode is active</span>
               )}
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded border border-black/15 px-3 py-1.5 text-xs text-black/70 hover:bg-black/5"
+                  className="rounded border border-[#1B475D]/20 bg-white/50 px-3 py-1.5 text-xs text-[#1B475D] hover:bg-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="rounded bg-[var(--brand)] px-4 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                  className="rounded bg-[#1B475D] px-4 py-1.5 text-xs font-semibold text-[#FFF5D0] shadow-sm hover:bg-[#1B475D]/90 transition"
                 >
                   Save Key
                 </button>
