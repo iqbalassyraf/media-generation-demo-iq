@@ -78,7 +78,7 @@ export function ApiKeyModal() {
       const data = await res.json();
       if (res.ok) {
         setTestState("valid");
-        setTestMessage("API key is valid and connected to Gemini!");
+        setTestMessage(data.message || "API key is valid and connected!");
       } else {
         setTestState("invalid");
         setTestMessage(data.error || "Invalid API key");
@@ -126,7 +126,7 @@ export function ApiKeyModal() {
                   Bring Your Own Key (BYOK)
                 </h3>
                 <p className="mt-1 text-xs text-black/60">
-                  Use your own Gemini API key for real image and video generation. The key stays in your browser.
+                  Use your Google AI Studio key (<code className="font-mono">AIzaSy...</code>) or Google Cloud Vertex AI key (<code className="font-mono">AQ....</code>). Stored locally in your browser.
                 </p>
               </div>
               <button
@@ -142,7 +142,7 @@ export function ApiKeyModal() {
             <div className="mt-5 space-y-3">
               <div>
                 <label className="block text-xs font-medium text-[var(--ink)] mb-1">
-                  Gemini API Key
+                  Gemini / Vertex AI Key
                 </label>
                 <div className="relative">
                   <input
@@ -152,7 +152,7 @@ export function ApiKeyModal() {
                       setInputVal(e.target.value);
                       if (testState !== "idle") setTestState("idle");
                     }}
-                    placeholder="AIzaSy..."
+                    placeholder="AIzaSy... or AQ...."
                     className="input font-mono text-xs pr-16"
                   />
                   <button
@@ -232,3 +232,4 @@ export function ApiKeyModal() {
     </>
   );
 }
+

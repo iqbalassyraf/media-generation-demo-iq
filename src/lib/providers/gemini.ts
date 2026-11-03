@@ -10,8 +10,18 @@ import type { ImageRequest, MediaProvider, VideoPoll, VideoStartRequest } from "
  *  - otherwise                        → Gemini Developer API with GEMINI_API_KEY
  */
 function createClient(apiKeyOverride?: string): GoogleGenAI {
-  if (apiKeyOverride?.trim()) {
-    return new GoogleGenAI({ apiKey: apiKeyOverride.trim() });
+  const key = apiKeyOverride?.trim() || process.env.GEMINI_API_KEY?.trim();
+  if (key) {
+    if (key.startsWith("AQ.")) {
+      // Vertex AI API key (Google Cloud Vertex AI Express / Enterprise Agent Platform)
+      return new GoogleGenAI({
+        vertexai: true,
+        project: process.env.GOOGLE_CLOUD_PROJECT || "825574069297",
+        location: process.env.GOOGLE_CLOUD_LOCATION || "us-central1",
+        apiKey: key,
+      });
+    }
+    return new GoogleGenAI({ apiKey: key });
   }
   if (process.env.GOOGLE_GENAI_USE_VERTEXAI === "true") {
     return new GoogleGenAI({
@@ -20,9 +30,7 @@ function createClient(apiKeyOverride?: string): GoogleGenAI {
       location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
     });
   }
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set (or enable GOOGLE_GENAI_USE_VERTEXAI for ADC)");
-  return new GoogleGenAI({ apiKey });
+  throw new Error("GEMINI_API_KEY is not set (or enable GOOGLE_GENAI_USE_VERTEXAI for ADC)");
 }
 
 export class GeminiProvider implements MediaProvider {
