@@ -45,6 +45,7 @@ export function createJob(args: {
   if (!wf) throw new Error(`Unknown workflow: ${args.workflowId}`);
 
   const inputs: Record<string, string> = {};
+  const pendingRefs: Array<{ file: string; data: Buffer }> = [];
   for (const def of wf.inputs) {
     const raw = (args.inputs[def.key] ?? "").toString();
     if (def.type === "image") {
@@ -53,7 +54,7 @@ export function createJob(args: {
       if (!parsed || !parsed.mimeType.startsWith("image/")) throw new Error(`${def.label}: not a valid image`);
       if (parsed.data.length > 8 * 1024 * 1024) throw new Error(`${def.label}: image is over 8 MB`);
       const file = `${args.id}-${def.key}.${extForMime(parsed.mimeType)}`;
-      fs.writeFileSync(path.join(refDir(), file), parsed.data);
+      pendingRefs.push({ file, data: parsed.data });
       inputs[def.key] = `ref:${file}`;
       continue;
     }
@@ -63,6 +64,8 @@ export function createJob(args: {
     }
     inputs[def.key] = raw;
   }
+
+  for (const r of pendingRefs) fs.writeFileSync(path.join(refDir(), r.file), r.data);
 
   const now = Date.now();
   return {

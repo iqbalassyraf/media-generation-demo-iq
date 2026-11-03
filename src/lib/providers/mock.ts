@@ -20,7 +20,7 @@ export class MockProvider implements MediaProvider {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
   <rect width="100%" height="100%" fill="url(#g)"/>
-  <text x="40" y="70" font-size="34" font-weight="bold" fill="${c3}">${esc(brand?.name ?? "Brand")} · MOCK ${esc(label)}</text>
+  <text x="40" y="70" font-size="34" font-weight="bold" fill="${c3}">${esc((brand?.name ?? "Brand").slice(0, 24))} · MOCK ${esc(label)}</text>
   ${text}
 </svg>`;
     return Buffer.from(svg, "utf8");

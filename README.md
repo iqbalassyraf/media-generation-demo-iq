@@ -65,5 +65,8 @@ UI (Studio / Brand kit / Gallery)
 - `npm run dev`: development server
 - `npm run build` / `npm start`: production build and server
 - `npm run typecheck`: TypeScript check
+- `npm test`: unit and end-to-end tests (prompt rendering, validation, job runner in mock mode, deletion). Uses a temporary data directory and needs no credentials.
+
+Gallery runs can be deleted, which removes their output and reference files. Brand deletion does not affect past runs, which keep their own brand snapshot.
 
 Generated data lives in `./data` (or `DATA_DIR`) and is git-ignored.

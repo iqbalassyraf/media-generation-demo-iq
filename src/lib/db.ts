@@ -78,3 +78,7 @@ export function saveJob(job: Job): void {
     "INSERT INTO jobs (id, data, created_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data",
   ).run(job.id, JSON.stringify(job), job.createdAt);
 }
+
+export function deleteJob(id: string): void {
+  db.prepare("DELETE FROM jobs WHERE id = ?").run(id);
+}

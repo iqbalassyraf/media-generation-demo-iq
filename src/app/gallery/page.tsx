@@ -6,6 +6,12 @@ import type { Job } from "@/lib/types";
 export default function GalleryPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
 
+  async function remove(id: string) {
+    if (!confirm("Delete this run and its files?")) return;
+    await fetch(`/api/jobs/${id}`, { method: "DELETE" });
+    setJobs((cur) => cur.filter((j) => j.id !== id));
+  }
+
   useEffect(() => {
     const load = () => fetch("/api/jobs").then((r) => r.json()).then((d) => setJobs(d.jobs));
     load();
@@ -23,6 +29,7 @@ export default function GalleryPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="font-medium">{j.workflowName} · {j.brand.name}</span>
               <span className="opacity-60">{new Date(j.createdAt).toLocaleString()} · {j.status}</span>
+              <button onClick={() => remove(j.id)} className="text-xs text-red-700 underline">Delete</button>
             </div>
             {j.error && <p className="mt-2 text-sm text-red-700">{j.error}</p>}
             {j.outputs.length > 0 && (
