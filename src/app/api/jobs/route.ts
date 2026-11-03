@@ -13,7 +13,13 @@ export async function GET() {
 export async function POST(req: Request) {
   ensureSeedBrand();
   try {
-    const body = (await req.json()) as { brandId?: string; workflowId?: string; inputs?: Record<string, string> };
+    const body = (await req.json()) as {
+      brandId?: string;
+      workflowId?: string;
+      inputs?: Record<string, string>;
+      apiKey?: string;
+    };
+    const apiKey = body.apiKey || req.headers.get("x-gemini-api-key") || undefined;
     const brand = body.brandId ? getBrand(body.brandId) : null;
     if (!brand) return NextResponse.json({ error: "Choose a brand" }, { status: 400 });
 
@@ -26,7 +32,7 @@ export async function POST(req: Request) {
     saveJob(job);
 
     // Fire and forget: the client polls GET /api/jobs/:id for progress.
-    void runJob(job.id).catch((err) => console.error("runJob crashed", err));
+    void runJob(job.id, apiKey).catch((err) => console.error("runJob crashed", err));
 
     return NextResponse.json({ job }, { status: 202 });
   } catch (err) {

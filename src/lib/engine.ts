@@ -115,13 +115,13 @@ function saveOutput(job: Job, step: Step, data: Buffer, mimeType: string, mock: 
 }
 
 /** Runs a job to completion. Called without await from the POST route; progress is written to SQLite. */
-export async function runJob(jobId: string): Promise<void> {
+export async function runJob(jobId: string, apiKey?: string): Promise<void> {
   const job = getJob(jobId);
   if (!job) return;
   const wf = getWorkflow(job.workflowId);
   if (!wf) return fail(job, "Workflow no longer exists");
 
-  const provider = getProvider();
+  const provider = getProvider(apiKey);
   job.status = "running";
   saveJob(job);
 

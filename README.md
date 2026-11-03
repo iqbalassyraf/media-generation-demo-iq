@@ -66,12 +66,13 @@ If you do not want Vertex AI, set `GEMINI_API_KEY` (preferably via `--set-secret
 
 ## Connecting Gemini
 
-Pick one:
+You have three options:
 
-- **Gemini Developer API:** set `GEMINI_API_KEY`.
-- **Vertex AI with Application Default Credentials:** set `GOOGLE_GENAI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`, then run `gcloud auth application-default login`.
+1. **In-App BYOK (Bring Your Own Key):** Click **"Set API Key (BYOK)"** in the top navigation bar of the web app. Paste your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey). The key is stored locally in your browser's `localStorage` and sent directly with your generation requests.
+2. **Server-side Gemini Developer API:** set `GEMINI_API_KEY` in `.env.local` (or Cloud Run environment/secrets).
+3. **Vertex AI with Application Default Credentials:** set `GOOGLE_GENAI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`, then run `gcloud auth application-default login`.
 
-Force a provider with `MEDIA_PROVIDER=gemini` or `MEDIA_PROVIDER=mock`. Model IDs come from `IMAGE_MODEL` and `VIDEO_MODEL`. Check the defaults in `.env.example` against models your account has access to.
+If no key is configured or provided, the app runs in **Mock mode** generating SVG placeholders offline. Force a provider with `MEDIA_PROVIDER=gemini` or `MEDIA_PROVIDER=mock`. Model IDs come from `IMAGE_MODEL` and `VIDEO_MODEL`. Check the defaults in `.env.example` against models your account has access to.
 
 ## Workflows
 

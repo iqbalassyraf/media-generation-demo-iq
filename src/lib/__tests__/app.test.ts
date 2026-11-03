@@ -109,3 +109,13 @@ test("deleteJob removes the record", () => {
   m.deleteJob("social-1");
   assert.equal(m.getJob("social-1"), null);
 });
+
+test("getProvider returns GeminiProvider when BYOK apiKey is provided", async () => {
+  const { getProvider } = await import("../providers");
+  const defaultProvider = getProvider();
+  assert.equal(defaultProvider.name, "mock");
+
+  const byokProvider = getProvider("fake-byok-api-key");
+  assert.equal(byokProvider.name, "gemini");
+  assert.equal(byokProvider.mock, false);
+});

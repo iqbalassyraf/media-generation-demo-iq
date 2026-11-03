@@ -9,7 +9,10 @@ import type { ImageRequest, MediaProvider, VideoPoll, VideoStartRequest } from "
  *  - GOOGLE_GENAI_USE_VERTEXAI=true  → Vertex AI with Application Default Credentials
  *  - otherwise                        → Gemini Developer API with GEMINI_API_KEY
  */
-function createClient(): GoogleGenAI {
+function createClient(apiKeyOverride?: string): GoogleGenAI {
+  if (apiKeyOverride?.trim()) {
+    return new GoogleGenAI({ apiKey: apiKeyOverride.trim() });
+  }
   if (process.env.GOOGLE_GENAI_USE_VERTEXAI === "true") {
     return new GoogleGenAI({
       vertexai: true,
@@ -29,8 +32,8 @@ export class GeminiProvider implements MediaProvider {
   private imageModel = process.env.IMAGE_MODEL ?? "gemini-2.5-flash-image";
   private videoModel = process.env.VIDEO_MODEL ?? "veo-3.0-generate-001";
 
-  constructor() {
-    this.ai = createClient();
+  constructor(apiKeyOverride?: string) {
+    this.ai = createClient(apiKeyOverride);
   }
 
   async generateImage(req: ImageRequest) {

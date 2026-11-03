@@ -14,6 +14,16 @@ export default function StudioPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
+
+  useEffect(() => {
+    const checkKey = () => {
+      setHasApiKey(Boolean(localStorage.getItem("gemini_api_key")?.trim()));
+    };
+    checkKey();
+    window.addEventListener("apiKeyChanged", checkKey);
+    return () => window.removeEventListener("apiKeyChanged", checkKey);
+  }, []);
 
   useEffect(() => {
     fetch("/api/brands").then((r) => r.json()).then((d) => {
@@ -49,10 +59,14 @@ export default function StudioPage() {
     setSubmitting(true);
     setJob(null);
     try {
+      const storedKey = typeof window !== "undefined" ? localStorage.getItem("gemini_api_key")?.trim() || "" : "";
       const r = await fetch("/api/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandId, workflowId, inputs: values }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(storedKey ? { "x-gemini-api-key": storedKey } : {}),
+        },
+        body: JSON.stringify({ brandId, workflowId, inputs: values, apiKey: storedKey }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error ?? "Could not start job");
@@ -109,6 +123,20 @@ export default function StudioPage() {
         ))}
 
         {error && <p className="rounded bg-red-100 p-3 text-sm text-red-800">{error}</p>}
+
+        <div className="rounded border border-black/10 bg-black/[0.02] p-3 text-xs">
+          {hasApiKey ? (
+            <div className="flex items-center gap-2 text-emerald-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span><strong>BYOK Active:</strong> Generating with your personal Gemini API key.</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-black/60">
+              <span className="h-2 w-2 rounded-full bg-black/30" />
+              <span><strong>Mock Mode:</strong> Placeholder SVGs. Click <em>Set API Key (BYOK)</em> in top bar for real media.</span>
+            </div>
+          )}
+        </div>
 
         <button disabled={running || !brandId || !workflowId}
           className="rounded bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50">
