@@ -71,20 +71,30 @@ export class GeminiProvider implements MediaProvider {
   }
 
   async startVideo(req: VideoStartRequest) {
-    const op = await this.ai.models.generateVideos({
-      model: this.videoModel,
-      prompt: req.prompt,
-      image: req.startingImage
-        ? { imageBytes: req.startingImage.data.toString("base64"), mimeType: req.startingImage.mimeType }
-        : undefined,
-      config: {
-        aspectRatio: req.aspectRatio,
-        durationSeconds: req.durationSeconds,
-        numberOfVideos: 1,
-      },
-    });
-    if (!op.name) throw new Error("Video model did not return an operation name");
-    return { operationName: op.name };
+    try {
+      const op = await this.ai.models.generateVideos({
+        model: this.videoModel,
+        prompt: req.prompt,
+        image: req.startingImage
+          ? { imageBytes: req.startingImage.data.toString("base64"), mimeType: req.startingImage.mimeType }
+          : undefined,
+        config: {
+          aspectRatio: req.aspectRatio,
+          durationSeconds: req.durationSeconds,
+          numberOfVideos: 1,
+        },
+      });
+      if (!op.name) throw new Error("Video model did not return an operation name");
+      return { operationName: op.name };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("404") || msg.includes("NOT_FOUND")) {
+        throw new Error(
+          `Veo video generation model (${this.videoModel}) was not found or your project has not been allowlisted for Vertex AI Veo preview. To generate real video, switch to an API key from Google AI Studio (aistudio.google.com/apikey) or request Vertex AI Veo access from Google Cloud.`
+        );
+      }
+      throw err;
+    }
   }
 
   async pollVideo(operationName: string): Promise<VideoPoll> {
