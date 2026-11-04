@@ -15,23 +15,35 @@ export async function POST(req: Request) {
     let devError: string | null = null;
     let vertexError: string | null = null;
 
-    // 1. First, try standard Gemini Developer API (Google AI Studio - generativelanguage.googleapis.com)
+    // 1. First, try Google AI Studio (generativelanguage.googleapis.com)
     try {
       const aiDev = new GoogleGenAI({ apiKey: key });
-      await aiDev.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: "ping" }] }],
-      });
+      // Validate key via models.list (native AI Studio method) or gemini-2.0-flash / gemini-1.5-flash
+      try {
+        await aiDev.models.list({ config: { pageSize: 1 } });
+      } catch (listErr) {
+        try {
+          await aiDev.models.generateContent({
+            model: "gemini-2.0-flash",
+            contents: [{ role: "user", parts: [{ text: "ping" }] }],
+          });
+        } catch {
+          await aiDev.models.generateContent({
+            model: "gemini-1.5-flash",
+            contents: [{ role: "user", parts: [{ text: "ping" }] }],
+          });
+        }
+      }
       return NextResponse.json({
         ok: true,
         mode: "gemini",
-        message: "Connected to Gemini Developer API (Google AI Studio / generativelanguage)",
+        message: "Connected to Gemini Developer API (Google AI Studio)",
       });
     } catch (err) {
       devError = err instanceof Error ? err.message : String(err);
     }
 
-    // 2. If Developer API fails, try Vertex AI (aiplatform.googleapis.com)
+    // 2. If Developer API is blocked, try Google Cloud Vertex AI (aiplatform.googleapis.com)
     try {
       const aiVertex = new GoogleGenAI({
         vertexai: true,
@@ -46,14 +58,13 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: true,
         mode: "vertex",
-        message: "Connected to Google Cloud Vertex AI (aiplatform)",
+        message: "Connected to Google Cloud Vertex AI",
       });
     } catch (err) {
       vertexError = err instanceof Error ? err.message : String(err);
     }
 
-    // If both failed, return the clearest error
-    const finalErr = devError && !devError.includes("API_KEY_SERVICE_BLOCKED") ? devError : (vertexError || devError || "Validation failed");
+    const finalErr = devError || vertexError || "Validation failed";
     return NextResponse.json({ error: finalErr }, { status: 400 });
   } catch (err) {
     return NextResponse.json({ error: message(err) }, { status: 400 });

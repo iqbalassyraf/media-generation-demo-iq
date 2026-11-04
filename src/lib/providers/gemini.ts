@@ -62,51 +62,78 @@ export class GeminiProvider implements MediaProvider {
     }));
     parts.push({ text: req.prompt });
 
-    const res = await this.ai.models.generateContent({
-      model: this.imageModel,
-      contents: [{ role: "user", parts }],
-      config: {
-        responseModalities: ["IMAGE"],
-        imageConfig: { aspectRatio: req.aspectRatio },
-      },
-    } as Parameters<GoogleGenAI["models"]["generateContent"]>[0]);
+    const modelsToTry = [this.imageModel, "gemini-2.5-flash-image", "imagen-3.0-generate-002"].filter(
+      (m, idx, arr) => arr.indexOf(m) === idx
+    );
 
-    const part = res.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
-    if (!part?.inlineData?.data) {
-      const reason = res.candidates?.[0]?.finishReason ?? "no image part in response";
-      throw new Error(`Image model returned no image (${reason})`);
+    let lastError: unknown;
+    for (const model of modelsToTry) {
+      try {
+        const res = await this.ai.models.generateContent({
+          model,
+          contents: [{ role: "user", parts }],
+          config: {
+            responseModalities: ["IMAGE"],
+            imageConfig: { aspectRatio: req.aspectRatio },
+          },
+        } as Parameters<GoogleGenAI["models"]["generateContent"]>[0]);
+
+        const part = res.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+        if (part?.inlineData?.data) {
+          return {
+            data: Buffer.from(part.inlineData.data, "base64"),
+            mimeType: part.inlineData.mimeType ?? "image/png",
+          };
+        }
+      } catch (err: unknown) {
+        lastError = err;
+        const msg = String(err);
+        if (!msg.includes("404") && !msg.includes("not found")) {
+          throw err;
+        }
+      }
     }
-    return {
-      data: Buffer.from(part.inlineData.data, "base64"),
-      mimeType: part.inlineData.mimeType ?? "image/png",
-    };
+
+    throw lastError || new Error("Image model returned no image");
   }
 
   async startVideo(req: VideoStartRequest) {
-    try {
-      const op = await this.ai.models.generateVideos({
-        model: this.videoModel,
-        prompt: req.prompt,
-        image: req.startingImage
-          ? { imageBytes: req.startingImage.data.toString("base64"), mimeType: req.startingImage.mimeType }
-          : undefined,
-        config: {
-          aspectRatio: req.aspectRatio,
-          durationSeconds: req.durationSeconds,
-          numberOfVideos: 1,
-        },
-      });
-      if (!op.name) throw new Error("Video model did not return an operation name");
-      return { operationName: op.name };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("404") || msg.includes("NOT_FOUND")) {
-        throw new Error(
-          `Veo video generation model (${this.videoModel}) was not found or your project has not been allowlisted for Vertex AI Veo preview. To generate real video, switch to an API key from Google AI Studio (aistudio.google.com/apikey) or request Vertex AI Veo access from Google Cloud.`
-        );
+    const modelsToTry = [this.videoModel, "veo-3.1-generate-preview", "veo-2.0-generate-001", "veo-3.0-generate-001"].filter(
+      (m, idx, arr) => arr.indexOf(m) === idx
+    );
+
+    let lastError: unknown;
+    for (const model of modelsToTry) {
+      try {
+        const op = await this.ai.models.generateVideos({
+          model,
+          prompt: req.prompt,
+          image: req.startingImage
+            ? { imageBytes: req.startingImage.data.toString("base64"), mimeType: req.startingImage.mimeType }
+            : undefined,
+          config: {
+            aspectRatio: req.aspectRatio,
+            durationSeconds: req.durationSeconds,
+            numberOfVideos: 1,
+          },
+        });
+        if (op.name) return { operationName: op.name };
+      } catch (err: unknown) {
+        lastError = err;
+        const msg = String(err);
+        if (!msg.includes("404") && !msg.includes("NOT_FOUND") && !msg.includes("not found")) {
+          throw err;
+        }
       }
-      throw err;
     }
+
+    const msg = lastError instanceof Error ? lastError.message : String(lastError);
+    if (msg.includes("404") || msg.includes("NOT_FOUND")) {
+      throw new Error(
+        `Veo video generation model is not accessible with this account or region. Verify your Google AI Studio or Vertex AI account has access to Veo.`
+      );
+    }
+    throw lastError;
   }
 
   async pollVideo(operationName: string): Promise<VideoPoll> {
