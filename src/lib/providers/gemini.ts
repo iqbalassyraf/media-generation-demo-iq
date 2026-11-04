@@ -9,11 +9,22 @@ import type { ImageRequest, MediaProvider, VideoPoll, VideoStartRequest } from "
  *  - GOOGLE_GENAI_USE_VERTEXAI=true  → Vertex AI with Application Default Credentials
  *  - otherwise                        → Gemini Developer API with GEMINI_API_KEY
  */
-function createClient(apiKeyOverride?: string): GoogleGenAI {
+function createClient(apiKeyOverride?: string, modeOverride?: string): GoogleGenAI {
   const key = apiKeyOverride?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (key) {
+    if (modeOverride === "gemini") {
+      return new GoogleGenAI({ apiKey: key });
+    }
+    if (modeOverride === "vertex") {
+      return new GoogleGenAI({
+        vertexai: true,
+        project: process.env.GOOGLE_CLOUD_PROJECT || "825574069297",
+        location: process.env.GOOGLE_CLOUD_LOCATION || "us-central1",
+        apiKey: key,
+      });
+    }
+    // If not explicitly set, keys starting with AQ. default to Vertex AI
     if (key.startsWith("AQ.")) {
-      // Vertex AI API key (Google Cloud Vertex AI Express / Enterprise Agent Platform)
       return new GoogleGenAI({
         vertexai: true,
         project: process.env.GOOGLE_CLOUD_PROJECT || "825574069297",
@@ -38,10 +49,11 @@ export class GeminiProvider implements MediaProvider {
   readonly mock = false;
   private ai: GoogleGenAI;
   private imageModel = process.env.IMAGE_MODEL ?? "gemini-2.5-flash-image";
-  private videoModel = process.env.VIDEO_MODEL ?? "veo-3.0-generate-001";
+  private videoModel: string;
 
-  constructor(apiKeyOverride?: string) {
-    this.ai = createClient(apiKeyOverride);
+  constructor(apiKeyOverride?: string, modeOverride?: string) {
+    this.ai = createClient(apiKeyOverride, modeOverride);
+    this.videoModel = process.env.VIDEO_MODEL ?? (modeOverride === "gemini" ? "veo-3.1-generate-preview" : "veo-3.0-generate-001");
   }
 
   async generateImage(req: ImageRequest) {

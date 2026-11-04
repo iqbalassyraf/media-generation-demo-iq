@@ -12,28 +12,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
-    const isVertex = key.startsWith("AQ.") || process.env.GOOGLE_GENAI_USE_VERTEXAI === "true";
-    const ai = isVertex
-      ? new GoogleGenAI({
-          vertexai: true,
-          project: process.env.GOOGLE_CLOUD_PROJECT || "825574069297",
-          location: process.env.GOOGLE_CLOUD_LOCATION || "us-central1",
-          apiKey: key,
-        })
-      : new GoogleGenAI({ apiKey: key });
+    let devError: string | null = null;
+    let vertexError: string | null = null;
 
-    // Validate key with a lightweight 1-token test prompt (works with both Vertex AI & AI Studio)
-    await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: "ping" }] }],
-    });
+    // 1. First, try standard Gemini Developer API (Google AI Studio - generativelanguage.googleapis.com)
+    try {
+      const aiDev = new GoogleGenAI({ apiKey: key });
+      await aiDev.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: "ping" }] }],
+      });
+      return NextResponse.json({
+        ok: true,
+        mode: "gemini",
+        message: "Connected to Gemini Developer API (Google AI Studio / generativelanguage)",
+      });
+    } catch (err) {
+      devError = err instanceof Error ? err.message : String(err);
+    }
 
-    return NextResponse.json({
-      ok: true,
-      message: isVertex
-        ? "Connected to Vertex AI (Gemini 2.5 Flash / project 825574069297)"
-        : "Connected to Gemini Developer API",
-    });
+    // 2. If Developer API fails, try Vertex AI (aiplatform.googleapis.com)
+    try {
+      const aiVertex = new GoogleGenAI({
+        vertexai: true,
+        project: process.env.GOOGLE_CLOUD_PROJECT || "825574069297",
+        location: process.env.GOOGLE_CLOUD_LOCATION || "us-central1",
+        apiKey: key,
+      });
+      await aiVertex.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: "ping" }] }],
+      });
+      return NextResponse.json({
+        ok: true,
+        mode: "vertex",
+        message: "Connected to Google Cloud Vertex AI (aiplatform)",
+      });
+    } catch (err) {
+      vertexError = err instanceof Error ? err.message : String(err);
+    }
+
+    // If both failed, return the clearest error
+    const finalErr = devError && !devError.includes("API_KEY_SERVICE_BLOCKED") ? devError : (vertexError || devError || "Validation failed");
+    return NextResponse.json({ error: finalErr }, { status: 400 });
   } catch (err) {
     return NextResponse.json({ error: message(err) }, { status: 400 });
   }

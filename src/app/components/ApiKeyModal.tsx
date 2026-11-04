@@ -79,6 +79,9 @@ export function ApiKeyModal() {
       if (res.ok) {
         setTestState("valid");
         setTestMessage(data.message || "API key is valid and connected!");
+        if (data.mode) {
+          localStorage.setItem("gemini_api_mode", data.mode);
+        }
       } else {
         setTestState("invalid");
         setTestMessage(data.error || "Invalid API key");

@@ -60,13 +60,14 @@ export default function StudioPage() {
     setJob(null);
     try {
       const storedKey = typeof window !== "undefined" ? localStorage.getItem("gemini_api_key")?.trim() || "" : "";
+      const storedMode = typeof window !== "undefined" ? localStorage.getItem("gemini_api_mode")?.trim() || "" : "";
       const r = await fetch("/api/jobs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(storedKey ? { "x-gemini-api-key": storedKey } : {}),
+          ...(storedKey ? { "x-gemini-api-key": storedKey, "x-gemini-api-mode": storedMode } : {}),
         },
-        body: JSON.stringify({ brandId, workflowId, inputs: values, apiKey: storedKey }),
+        body: JSON.stringify({ brandId, workflowId, inputs: values, apiKey: storedKey, apiMode: storedMode }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error ?? "Could not start job");
