@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen antialiased bg-[#FFF5D0] text-[#1B475D]">
-        <header className="border-b border-[#1B475D]/15 bg-[#FFF5D0]/85 backdrop-blur-md sticky top-0 z-40">
+        <header className="border-b border-[#1B475D]/15 bg-[#FFF5D0] sticky top-0 z-40">
           <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
             <div className="flex items-center gap-6">
               <span className="font-serif text-xl font-bold tracking-tight text-[#1B475D]">Brand Studio</span>

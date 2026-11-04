@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+
+function cleanKey(raw: string): string {
+  if (!raw) return "";
+  // If the user pasted text containing an API key, extract the key
+  const match = raw.match(/[A-Za-z0-9_\-\.]{25,}/);
+  if (match) return match[0];
+  // Otherwise strip all non-ASCII characters (e.g. ✕ \u2715, quotes, newlines, zero-width spaces)
+  return raw.replace(/[^\x21-\x7E]/g, "").trim();
+}
 
 export function ApiKeyModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,8 +19,10 @@ export function ApiKeyModal() {
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<"idle" | "testing" | "valid" | "invalid">("idle");
   const [testMessage, setTestMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const saved = localStorage.getItem("gemini_api_key") || "";
     setApiKey(saved);
     setInputVal(saved);
@@ -39,19 +51,22 @@ export function ApiKeyModal() {
   }
 
   function handleSave() {
-    const trimmed = inputVal.trim();
-    if (trimmed) {
-      localStorage.setItem("gemini_api_key", trimmed);
+    const sanitized = cleanKey(inputVal);
+    if (sanitized) {
+      localStorage.setItem("gemini_api_key", sanitized);
     } else {
       localStorage.removeItem("gemini_api_key");
+      localStorage.removeItem("gemini_api_mode");
     }
-    setApiKey(trimmed);
+    setApiKey(sanitized);
+    setInputVal(sanitized);
     window.dispatchEvent(new Event("apiKeyChanged"));
     closeModal();
   }
 
   function handleClear() {
     localStorage.removeItem("gemini_api_key");
+    localStorage.removeItem("gemini_api_mode");
     setApiKey("");
     setInputVal("");
     window.dispatchEvent(new Event("apiKeyChanged"));
@@ -59,13 +74,14 @@ export function ApiKeyModal() {
   }
 
   async function handleTest() {
-    const trimmed = inputVal.trim();
-    if (!trimmed) {
+    const sanitized = cleanKey(inputVal);
+    if (!sanitized) {
       setTestState("invalid");
       setTestMessage("Please enter an API key first.");
       return;
     }
 
+    setInputVal(sanitized);
     setTestState("testing");
     setTestMessage(null);
 
@@ -73,7 +89,7 @@ export function ApiKeyModal() {
       const res = await fetch("/api/key/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: trimmed }),
+        body: JSON.stringify({ apiKey: sanitized }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -115,11 +131,11 @@ export function ApiKeyModal() {
         </span>
       </button>
 
-      {/* Modal Dialog */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1B475D]/40 p-4 backdrop-blur-sm">
+      {/* Modal Dialog Portal - Always perfectly centered in viewport */}
+      {isOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#1B475D]/45 p-4 backdrop-blur-sm animate-in fade-in duration-150">
           <div
-            className="w-full max-w-md rounded-xl border border-[#1B475D]/20 bg-[#FFF5D0] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-[#1B475D]"
+            className="w-full max-w-md rounded-2xl border border-[#1B475D]/25 bg-[#FFF5D0] p-6 shadow-2xl text-[#1B475D] max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150"
             role="dialog"
             aria-modal="true"
           >
@@ -128,14 +144,14 @@ export function ApiKeyModal() {
                 <h3 className="font-serif text-lg font-bold text-[#1B475D]">
                   Bring Your Own Key (BYOK)
                 </h3>
-                <p className="mt-1 text-xs text-[#1B475D]/70">
-                  Use your Google AI Studio key (<code className="font-mono">AIzaSy...</code>) or Google Cloud Vertex AI key (<code className="font-mono">AQ....</code>). Stored locally in your browser.
+                <p className="mt-1 text-xs text-[#1B475D]/75">
+                  Paste your Gemini API key from Google AI Studio. Stored locally in your browser.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-[#1B475D]/50 hover:text-[#1B475D]"
+                className="text-[#1B475D]/50 hover:text-[#1B475D] text-lg font-bold px-1"
                 aria-label="Close"
               >
                 ✕
@@ -145,7 +161,7 @@ export function ApiKeyModal() {
             <div className="mt-5 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-[#1B475D] mb-1">
-                  Gemini / Vertex AI Key
+                  Gemini API Key
                 </label>
                 <div className="relative">
                   <input
@@ -154,6 +170,12 @@ export function ApiKeyModal() {
                     onChange={(e) => {
                       setInputVal(e.target.value);
                       if (testState !== "idle") setTestState("idle");
+                    }}
+                    onPaste={(e) => {
+                      // Automatically clean on paste
+                      setTimeout(() => {
+                        setInputVal((val) => cleanKey(val));
+                      }, 0);
                     }}
                     placeholder="AIzaSy... or AQ...."
                     className="input font-mono text-xs pr-16"
@@ -168,33 +190,33 @@ export function ApiKeyModal() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-[#1B475D]/70">
+              <div className="flex items-center justify-between text-[11px] text-[#1B475D]/75">
                 <a
                   href="https://aistudio.google.com/apikey"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[#1B475D] underline hover:text-[#8EBD9D]"
+                  className="text-[#1B475D] underline hover:text-[#8EBD9D] font-medium"
                 >
-                  Get a free Gemini API key →
+                  Get free Gemini key from AI Studio →
                 </a>
                 <button
                   type="button"
                   onClick={handleTest}
                   disabled={testState === "testing" || !inputVal.trim()}
-                  className="rounded border border-[#1B475D]/20 bg-white/80 px-2 py-1 text-[11px] font-medium text-[#1B475D] hover:bg-[#FAD564]/30 disabled:opacity-40 transition"
+                  className="rounded-lg border border-[#1B475D]/25 bg-white/90 px-3 py-1 text-[11px] font-semibold text-[#1B475D] hover:bg-[#FAD564]/30 disabled:opacity-40 transition shadow-sm"
                 >
                   {testState === "testing" ? "Testing..." : "Test Key"}
                 </button>
               </div>
 
               {testState === "valid" && (
-                <div className="rounded bg-[#8EBD9D]/25 border border-[#8EBD9D] p-2 text-xs text-[#1B475D] font-medium">
+                <div className="rounded-xl bg-[#8EBD9D]/25 border border-[#8EBD9D] p-3 text-xs text-[#1B475D] font-medium">
                   ✓ {testMessage}
                 </div>
               )}
 
               {testState === "invalid" && (
-                <div className="rounded bg-rose-50 border border-rose-300 p-2 text-xs text-rose-800">
+                <div className="rounded-xl bg-rose-50 border border-rose-300 p-3 text-xs text-rose-800">
                   ✕ {testMessage}
                 </div>
               )}
@@ -205,34 +227,34 @@ export function ApiKeyModal() {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="text-xs text-rose-700 hover:underline"
+                  className="text-xs text-rose-700 hover:underline font-medium"
                 >
                   Clear Key (Use Mock)
                 </button>
               ) : (
-                <span className="text-xs text-[#1B475D]/50">Mock mode is active</span>
+                <span className="text-xs text-[#1B475D]/60">Mock mode is active</span>
               )}
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded border border-[#1B475D]/20 bg-white/50 px-3 py-1.5 text-xs text-[#1B475D] hover:bg-white"
+                  className="rounded-lg border border-[#1B475D]/20 bg-white/60 px-3.5 py-1.5 text-xs font-medium text-[#1B475D] hover:bg-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="rounded bg-[#1B475D] px-4 py-1.5 text-xs font-semibold text-[#FFF5D0] shadow-sm hover:bg-[#1B475D]/90 transition"
+                  className="rounded-lg bg-[#1B475D] px-4 py-1.5 text-xs font-semibold text-[#FFF5D0] shadow-sm hover:bg-[#1B475D]/90 transition"
                 >
                   Save Key
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
 }
-
